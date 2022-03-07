@@ -2,11 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { adminUser } from './objects/users';
 import { setupApp } from './factories/setup-app';
-import {
-  getAdminToken,
-  getLawyerToken,
-  getSecretaryToken,
-} from './factories/get-token';
+import { getAdminToken } from './factories/get-token';
 
 describe('App', () => {
   let app: INestApplication;
@@ -68,28 +64,6 @@ describe('App', () => {
 
       expect(response.body.reset_token).toBeDefined();
       expect(response.status).toBe(201);
-    });
-
-    it('forbids a secretary to generate reset password token', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/auth/generate_reset_token')
-        .set(await getSecretaryToken(app))
-        .send({
-          userId: user.id,
-        });
-
-      expect(response.status).toBe(403);
-    });
-
-    it('forbids a lawyer to generate reset password token', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/auth/generate_reset_token')
-        .set(await getLawyerToken(app))
-        .send({
-          userId: user.id,
-        });
-
-      expect(response.status).toBe(403);
     });
 
     it('get reset password token and validates it', async () => {

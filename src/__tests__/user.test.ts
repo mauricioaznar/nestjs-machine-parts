@@ -1,15 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import { setupApp } from './factories/setup-app';
 import * as request from 'supertest';
-import {
-  getAdminToken,
-  getLawyerToken,
-  getSecretaryToken,
-} from './factories/get-token';
+import { getAdminToken } from './factories/get-token';
 import { adminUser } from './objects/users';
 import { Connection } from 'mysql2/promise';
 import { getMysqlConnection } from './helpers/get-mysql-connection';
-import { areEntitiesActiveMysql } from './helpers/are-entities-active-mysql';
 
 describe('Users', () => {
   let app: INestApplication;
@@ -29,22 +24,22 @@ describe('Users', () => {
   });
 
   describe('user testing setup', () => {
-    test('user1 contains group1 and is a lawyer', async () => {
+    test('admin user is an admin', async () => {
       const response = await request(app.getHttpServer())
         .get(`/users/${adminUser.id}`)
         .set(await getAdminToken(app));
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('id');
-      expect(response.body.roleId).toBe(2);
+      expect(response.body.roleId).toBe(1);
     });
   });
 
   describe('get user list', () => {
-    test('allows any user to get user list', async () => {
+    test('allows admin to get user list', async () => {
       const response = await request(app.getHttpServer())
         .get('/users')
-        .set(await getSecretaryToken(app));
+        .set(await getAdminToken(app));
 
       expect(response.body).toBeInstanceOf(Array);
       expect(response.body.length).toBeGreaterThan(0);
@@ -198,46 +193,6 @@ describe('Users', () => {
 
       expect(response.status).toBe(400);
     });
-
-    it('forbids a user to be patched by a lawyer', async () => {
-      const response = await request(app.getHttpServer())
-        .patch(`/users/${user1.id}`)
-        .set(await getLawyerToken(app))
-        .send({
-          ...user1Properties,
-        });
-
-      expect(response.status).toBe(403);
-    });
-
-    it('forbids a user to be patched by a secretary', async () => {
-      const response = await request(app.getHttpServer())
-        .patch(`/users/${user1.id}`)
-        .set(await getSecretaryToken(app))
-        .send({
-          ...user1Properties,
-        });
-
-      expect(response.status).toBe(403);
-    });
-
-    for (const [key, value] of Object.entries(user1Properties)) {
-      if (user1Properties.hasOwnProperty(key)) {
-        const copyProperties = { ...user1Properties };
-        delete copyProperties[key];
-
-        it(`rejects when ${key} is missing`, async () => {
-          const appointmentResponse = await request(app.getHttpServer())
-            .patch(`/users/${user1.id}`)
-            .send({
-              ...copyProperties,
-            })
-            .set(await getAdminToken(app));
-
-          expect(appointmentResponse.status).toBe(400);
-        });
-      }
-    }
   });
 
   describe('removes user', () => {
@@ -285,14 +240,6 @@ describe('Users', () => {
         .set(await getAdminToken(app));
 
       expect(getResponse.status).toBe(404);
-    });
-
-    it('forbids a lawyer user to remove a user', async () => {
-      const response = await request(app.getHttpServer())
-        .delete(`/users/${user2.id}`)
-        .set(await getLawyerToken(app));
-
-      expect(response.status).toBe(403);
     });
   });
 });
